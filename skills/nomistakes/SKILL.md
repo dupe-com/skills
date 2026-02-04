@@ -9,6 +9,34 @@ description: Error prevention and best practices enforcement for agent-assisted 
 
 This skill helps agents write higher-quality code by proactively preventing common errors, enforcing best practices, and applying defensive programming patterns. Use this skill when writing any code to reduce bugs, improve maintainability, and follow established patterns.
 
+## Recommended Model Configuration
+
+For best results with this skill:
+
+**Minimum Requirements:**
+- **Model**: Claude 3.5 Sonnet or GPT-4 (or better)
+- **Reasoning**: Extended thinking enabled (if available)
+- **Context**: 8K+ tokens recommended for complex refactors
+
+**Why This Matters:**
+Error prevention requires deep reasoning about edge cases, type safety, and failure modes. Stronger models with extended thinking capabilities will:
+- Catch more subtle bugs (off-by-one, race conditions, type coercion)
+- Generate more robust validation logic
+- Provide better error handling strategies
+- Reason through complex async/promise chains
+
+**Optimal Setup (February 2026):**
+- Claude 3.7 Sonnet with extended thinking (most comprehensive error analysis)
+- GPT-4 Turbo with reasoning mode (strong at type safety)
+- Claude 3.5 Sonnet (good baseline, fast)
+
+**Suboptimal (will miss issues):**
+- Claude 3 Haiku (too fast, skips edge cases)
+- GPT-3.5 (lacks reasoning depth)
+- Any model without extended thinking for complex code
+
+If your agent doesn't support model selection, this skill will still help, but expect fewer proactive warnings about subtle bugs.
+
 ## When to Use This Skill
 
 Activate this skill when:
