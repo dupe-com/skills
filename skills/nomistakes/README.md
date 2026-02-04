@@ -36,6 +36,12 @@
 - **AI Code Review** - Checklist for catching bugs in AI-generated code
 - **TypeScript 5.x** - Latest type safety patterns
 
+### Model Configuration
+
+- **Recommended models** - Claude 3.5+ Sonnet, GPT-4+
+- **Extended thinking** - Enable for complex error analysis
+- **Guidance on suboptimal models** - Know what you'll miss with weaker models
+
 ## Quick Example
 
 **Without nomistakes:**

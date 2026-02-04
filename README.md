@@ -24,6 +24,7 @@ Error prevention and best practices enforcement for AI agent-assisted coding.
 - TypeScript strict mode patterns
 - Biome migration guide (ESLint → Biome)
 - AI code review checklist
+- Model configuration recommendations (Claude 3.5+, GPT-4+, extended thinking)
 - 60KB+ of reference documentation
 
 ---
