@@ -1,0 +1,95 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate all skills
+        run: |
+          echo "🔍 Validating skills..."
+          
+          for skill_dir in skills/*/; do
+            if [ -f "${skill_dir}SKILL.md" ]; then
+              skill_name=$(basename "$skill_dir")
+              echo ""
+              echo "📦 Validating: $skill_name"
+              
+              # Check SKILL.md exists and has frontmatter
+              if head -1 "${skill_dir}SKILL.md" | grep -q "^---$"; then
+                echo "  ✅ SKILL.md has frontmatter"
+              else
+                echo "  ❌ SKILL.md missing frontmatter (must start with ---)"
+                exit 1
+              fi
+              
+              # Check required fields
+              if grep -q "^name:" "${skill_dir}SKILL.md"; then
+                echo "  ✅ Has 'name' field"
+              else
+                echo "  ❌ Missing 'name' field"
+                exit 1
+              fi
+              
+              if grep -q "^description:" "${skill_dir}SKILL.md"; then
+                echo "  ✅ Has 'description' field"
+              else
+                echo "  ❌ Missing 'description' field"
+                exit 1
+              fi
+              
+              # Check line count (warning only)
+              lines=$(wc -l < "${skill_dir}SKILL.md")
+              if [ "$lines" -gt 500 ]; then
+                echo "  ⚠️  SKILL.md has $lines lines (recommended: <500)"
+              else
+                echo "  ✅ SKILL.md has $lines lines"
+              fi
+              
+              # Run skill-specific validator if exists
+              if [ -f "${skill_dir}scripts/validate-skill.js" ]; then
+                echo "  🔧 Running custom validator..."
+                node "${skill_dir}scripts/validate-skill.js" "${skill_dir}SKILL.md" || exit 1
+              fi
+              
+              echo "  ✅ $skill_name validated successfully"
+            fi
+          done
+          
+          echo ""
+          echo "✅ All skills validated!"
+
+      - name: Check for broken links in references
+        run: |
+          echo "🔗 Checking internal links..."
+          
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            
+            # Check that referenced files exist
+            if [ -d "${skill_dir}references" ]; then
+              for ref_file in "${skill_dir}references/"*.md; do
+                if [ -f "$ref_file" ]; then
+                  echo "  ✅ $(basename $ref_file) exists"
+                fi
+              done
+            fi
+          done
+          
+          echo "✅ Link check complete!"
