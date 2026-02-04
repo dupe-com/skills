@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "organization": "Dupe.com",
-  "author": "Ramin Akhavan",
+  "author": "Ramin Bozorgzadeh",
   "date": "February 2026",
   "abstract": "Comprehensive error prevention and best practices enforcement for AI agent-assisted coding. Contains 10+ core principles covering input validation, error handling, null safety, async operations, type safety, and defensive programming. Includes latest 2026 tooling guides (Biome migration, AI code review checklist) and 60KB+ of reference documentation with real-world examples, TypeScript patterns, and testing strategies.",
   "references": [
