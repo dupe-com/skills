@@ -9,34 +9,6 @@ description: Error prevention and best practices enforcement for agent-assisted 
 
 This skill helps agents write higher-quality code by proactively preventing common errors, enforcing best practices, and applying defensive programming patterns. Use this skill when writing any code to reduce bugs, improve maintainability, and follow established patterns.
 
-## Recommended Model Configuration
-
-For best results with this skill:
-
-**Minimum Requirements:**
-- **Model**: Claude 3.5 Sonnet or GPT-4 (or better)
-- **Reasoning**: Extended thinking enabled (if available)
-- **Context**: 8K+ tokens recommended for complex refactors
-
-**Why This Matters:**
-Error prevention requires deep reasoning about edge cases, type safety, and failure modes. Stronger models with extended thinking capabilities will:
-- Catch more subtle bugs (off-by-one, race conditions, type coercion)
-- Generate more robust validation logic
-- Provide better error handling strategies
-- Reason through complex async/promise chains
-
-**Optimal Setup (February 2026):**
-- Claude 3.7 Sonnet with extended thinking (most comprehensive error analysis)
-- GPT-4 Turbo with reasoning mode (strong at type safety)
-- Claude 3.5 Sonnet (good baseline, fast)
-
-**Suboptimal (will miss issues):**
-- Claude 3 Haiku (too fast, skips edge cases)
-- GPT-3.5 (lacks reasoning depth)
-- Any model without extended thinking for complex code
-
-If your agent doesn't support model selection, this skill will still help, but expect fewer proactive warnings about subtle bugs.
-
 ## When to Use This Skill
 
 Activate this skill when:
@@ -361,6 +333,374 @@ function parseJSON(text: string): Result<any> {
 - [ ] Return errors instead of throwing when appropriate
 - [ ] Use Result types for fallible operations
 
+### 11. Performance Anti-Patterns (Core Web Vitals)
+
+**Optimize for user experience metrics:**
+
+| Metric | Target | What it Measures |
+|--------|--------|------------------|
+| **LCP** (Largest Contentful Paint) | < 2.5s | Loading performance |
+| **INP** (Interaction to Next Paint) | < 200ms | Interactivity/responsiveness |
+| **CLS** (Cumulative Layout Shift) | < 0.1 | Visual stability |
+
+```typescript
+// ❌ BAD: Blocking resources, layout shifts
+function ProductPage() {
+  return (
+    <div>
+      {/* No dimensions = CLS issues */}
+      <img src={product.image} />
+      
+      {/* Sync heavy computation = INP issues */}
+      <div>{expensiveCalculation(data)}</div>
+      
+      {/* Render-blocking = LCP issues */}
+      <script src="huge-library.js" />
+    </div>
+  );
+}
+
+// ✅ GOOD: Optimized for Web Vitals
+function ProductPage() {
+  // Defer heavy work off main thread
+  const [result, setResult] = useState<Result | null>(null);
+  
+  useEffect(() => {
+    // Use Web Worker or requestIdleCallback for heavy work
+    requestIdleCallback(() => {
+      setResult(expensiveCalculation(data));
+    });
+  }, [data]);
+  
+  return (
+    <div>
+      {/* Explicit dimensions prevent layout shift */}
+      <img 
+        src={product.image} 
+        width={400} 
+        height={300}
+        loading="lazy"
+        decoding="async"
+      />
+      
+      {/* Skeleton prevents CLS while loading */}
+      {result ? <div>{result}</div> : <Skeleton />}
+    </div>
+  );
+}
+```
+
+**Performance checklist:**
+- [ ] Images have explicit `width` and `height` attributes
+- [ ] Use skeleton loaders for dynamic content
+- [ ] Defer non-critical JavaScript (`async`/`defer`)
+- [ ] Move heavy computation to Web Workers
+- [ ] Use `loading="lazy"` for below-fold images
+- [ ] Avoid layout shifts from dynamic content injection
+
+### 12. Fire-and-Forget Detection (Critical Bug Pattern)
+
+**Never use `void` with async functions in workers or handlers:**
+
+```typescript
+// ❌ CRITICAL BUG: Worker terminates before async work completes
+// This kills background jobs in Inngest, Vercel Functions, etc.
+export async function handler() {
+  void processInBackground(data); // Worker exits immediately!
+  return { status: 'accepted' };
+}
+
+// ❌ BAD: Signal handlers can't be async
+process.on('SIGTERM', () => {
+  void gracefulShutdown(); // Process exits before cleanup!
+});
+
+// ✅ GOOD: Await in worker contexts
+export async function handler() {
+  await processInBackground(data); // Waits for completion
+  return { status: 'processed' };
+}
+
+// ✅ GOOD: For intentional fire-and-forget, handle errors explicitly
+export async function handler() {
+  // Explicit error handling for background work
+  processInBackground(data).catch(err => {
+    logger.error('Background task failed', { error: err });
+    metrics.increment('background_task_failures');
+  });
+  return { status: 'accepted' };
+}
+
+// ✅ GOOD: Signal handler with proper async handling
+let shutdownPromise: Promise<void> | null = null;
+process.on('SIGTERM', () => {
+  shutdownPromise = gracefulShutdown();
+});
+process.on('beforeExit', async () => {
+  if (shutdownPromise) await shutdownPromise;
+});
+```
+
+**ESLint rule to catch this:**
+```json
+{
+  "rules": {
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error"
+  }
+}
+```
+
+**Fire-and-forget checklist:**
+- [ ] Enable `@typescript-eslint/no-floating-promises` rule
+- [ ] Never use `void asyncFunc()` in serverless/worker contexts
+- [ ] For intentional background work, add explicit `.catch()` handling
+- [ ] Signal handlers must store promise and await in `beforeExit`
+- [ ] Audit existing code for `void` + async patterns
+
+### 13. Server Actions Error Handling (Next.js/React)
+
+**Never throw in Server Actions - return typed errors instead:**
+
+```typescript
+// ❌ BAD: Throwing breaks React hydration and error boundaries
+'use server'
+export async function createUser(formData: FormData) {
+  const data = Object.fromEntries(formData);
+  
+  if (!data.email) {
+    throw new Error('Email required'); // Crashes client!
+  }
+  
+  const user = await db.users.create(data);
+  return user;
+}
+
+// ✅ GOOD: Return typed Result objects
+'use server'
+export async function createUser(formData: FormData): Promise<
+  { data: User } | { error: string }
+> {
+  const raw = Object.fromEntries(formData);
+  
+  // Validate with schema
+  const parsed = UserSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+  
+  try {
+    const user = await db.users.create(parsed.data);
+    return { data: user };
+  } catch (e) {
+    logger.error('Failed to create user', { error: e });
+    return { error: 'Failed to create user. Please try again.' };
+  }
+}
+
+// ✅ Client-side usage with proper error handling
+function CreateUserForm() {
+  const [state, formAction] = useActionState(createUser, null);
+  
+  return (
+    <form action={formAction}>
+      {state?.error && <ErrorMessage>{state.error}</ErrorMessage>}
+      <input name="email" type="email" required />
+      <button type="submit">Create</button>
+    </form>
+  );
+}
+```
+
+**Server Actions checklist:**
+- [ ] Never `throw` in Server Actions - always return `{ error }` or `{ data }`
+- [ ] Use Zod/Valibot `.safeParse()` for validation (not `.parse()`)
+- [ ] Log errors server-side before returning user-friendly message
+- [ ] Type the return as a discriminated union
+- [ ] Handle errors gracefully in the client component
+
+### 14. Security Quick Wins (OWASP Top 10 2025)
+
+**Essential security patterns for every application:**
+
+```typescript
+// 1. Rate Limiting - Prevent brute force attacks
+import rateLimit from 'express-rate-limit';
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { error: 'Too many login attempts. Try again later.' },
+  standardHeaders: true,
+});
+app.post('/login', loginLimiter, loginHandler);
+
+// 2. Input Validation - Prevent injection attacks
+import { z } from 'zod';
+
+const UserInputSchema = z.object({
+  email: z.string().email().max(255),
+  name: z.string().min(1).max(100).regex(/^[a-zA-Z\s-]+$/),
+  // Never trust client data
+});
+
+// 3. Output Encoding - Prevent XSS
+import { encode } from 'html-entities';
+
+function renderUserContent(content: string): string {
+  return encode(content); // Escapes <, >, &, ", '
+}
+
+// 4. Parameterized Queries - Prevent SQL injection
+// ❌ BAD: String interpolation
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// ✅ GOOD: Parameterized
+const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// 5. Secrets Management - Never hardcode
+// ❌ BAD
+const API_KEY = 'sk-1234567890abcdef';
+
+// ✅ GOOD
+const API_KEY = requireEnv('API_KEY'); // Validated at startup
+```
+
+**Security headers (add to all responses):**
+```typescript
+// Using Helmet.js or manual headers
+app.use(helmet({
+  contentSecurityPolicy: true,
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: true,
+  dnsPrefetchControl: true,
+  frameguard: true,
+  hidePoweredBy: true,
+  hsts: true,
+  ieNoOpen: true,
+  noSniff: true,
+  referrerPolicy: true,
+  xssFilter: true,
+}));
+```
+
+**Security checklist:**
+- [ ] Rate limiting on authentication endpoints
+- [ ] Input validation with allowlists (not blocklists)
+- [ ] Output encoding for user-generated content
+- [ ] Parameterized queries (never string interpolation)
+- [ ] Secrets in env vars, validated at startup
+- [ ] Security headers on all responses
+- [ ] `npm audit` and Snyk in CI/CD pipeline
+- [ ] 2FA enabled on npm/GitHub accounts
+
+### 15. TypeScript 5.x Safety Features
+
+**Leverage modern TypeScript for safer code:**
+
+```typescript
+// 1. `const` type parameters - Preserve literal types
+// ❌ Without const: type is string[]
+function createRoute<T extends string[]>(paths: T) {
+  return paths;
+}
+const routes = createRoute(['users', 'posts']); // string[]
+
+// ✅ With const: type is readonly ["users", "posts"]
+function createRoute<const T extends string[]>(paths: T) {
+  return paths;
+}
+const routes = createRoute(['users', 'posts']); // readonly ["users", "posts"]
+
+// 2. `satisfies` operator - Type-check without widening
+// ❌ Type annotation widens the type
+const config: Config = { port: 3000 }; // port is number
+
+// ✅ satisfies preserves the literal type
+const config = { port: 3000 } satisfies Config; // port is 3000
+
+// 3. `using` declarations - Automatic resource cleanup
+// ❌ Manual cleanup (easy to forget)
+async function processFile(path: string) {
+  const file = await fs.open(path);
+  try {
+    return await file.read();
+  } finally {
+    await file.close();
+  }
+}
+
+// ✅ Automatic cleanup with `using`
+async function processFile(path: string) {
+  await using file = await fs.open(path);
+  return await file.read();
+} // file.close() called automatically
+
+// 4. NoInfer utility type - Prevent inference from specific positions
+function createFSM<S extends string>(
+  initial: NoInfer<S>,  // Won't infer S from this parameter
+  states: S[]
+) { /* ... */ }
+
+// 5. Import attributes for JSON (type-safe imports)
+import config from './config.json' with { type: 'json' };
+```
+
+**TypeScript 5.x checklist:**
+- [ ] Use `const` type parameters for literal preservation
+- [ ] Use `satisfies` for type-checking without widening
+- [ ] Use `using`/`await using` for resource cleanup
+- [ ] Enable `"moduleResolution": "bundler"` for modern imports
+- [ ] Use `NoInfer<T>` to control type inference
+
+### 16. Modern Validation Library Selection
+
+**Choose the right validation library for your use case:**
+
+| Library | Bundle Size | Best For |
+|---------|-------------|----------|
+| **Zod** | ~14KB gzip | Server-side, complex schemas, transforms |
+| **Valibot** | ~600B gzip | Client-side, bundle-critical, simple schemas |
+| **@effect/schema** | Varies | Type-safe errors, branded types, enterprise |
+
+```typescript
+// Zod - Full-featured, great DX
+import { z } from 'zod';
+
+const UserSchema = z.object({
+  email: z.string().email(),
+  age: z.number().min(0).max(150),
+  role: z.enum(['admin', 'user']),
+}).transform(data => ({
+  ...data,
+  email: data.email.toLowerCase(),
+}));
+
+// Valibot - 10x smaller bundle (tree-shakeable)
+import * as v from 'valibot';
+
+const UserSchema = v.object({
+  email: v.pipe(v.string(), v.email()),
+  age: v.pipe(v.number(), v.minValue(0), v.maxValue(150)),
+  role: v.picklist(['admin', 'user']),
+});
+
+// Decision guide:
+// - Client-side form validation → Valibot (bundle size matters)
+// - Server-side API validation → Zod (features matter)
+// - Need .transform() → Zod
+// - Tree-shaking critical → Valibot
+// - Enterprise with branded types → Effect Schema
+```
+
+**Validation library checklist:**
+- [ ] Use Valibot for client-side validation (smaller bundle)
+- [ ] Use Zod for server-side validation (better DX)
+- [ ] Always use `.safeParse()` to get Result type
+- [ ] Never use `.parse()` in Server Actions (throws)
+- [ ] Consider Effect Schema for complex enterprise needs
+
 ## Common Anti-Patterns to Avoid
 
 ### 1. The Silent Failure
@@ -466,6 +806,7 @@ test('parseAmount never returns negative', () => {
 
 Before completing your task, verify:
 
+### Core Safety
 - [ ] **Input validation**: All function inputs validated
 - [ ] **Error handling**: No empty catch blocks, all errors logged
 - [ ] **Null safety**: No unsafe property access (use `?.`)
@@ -473,7 +814,22 @@ Before completing your task, verify:
 - [ ] **Async safety**: All promises awaited or handled
 - [ ] **Resource cleanup**: Files, connections, timers cleaned up
 - [ ] **Immutability**: No mutation of input parameters
-- [ ] **Tests**: Error cases tested, not just happy paths
+
+### Modern Patterns (2024+)
+- [ ] **No floating promises**: `@typescript-eslint/no-floating-promises` enabled
+- [ ] **Server Actions**: Return `{ error }` or `{ data }`, never throw
+- [ ] **Web Vitals**: Images have dimensions, no layout shifts
+- [ ] **TypeScript 5.x**: Using `using` for resources, `satisfies` for config
+- [ ] **Validation**: Valibot client-side, Zod server-side
+
+### Security
+- [ ] **Rate limiting**: Auth endpoints have rate limits
+- [ ] **Input sanitization**: User content escaped before render
+- [ ] **Secrets**: No hardcoded secrets, env vars validated at startup
+- [ ] **Dependencies**: `npm audit` passes, no critical vulnerabilities
+
+### Quality
+- [ ] **Tests**: Error cases tested first, then happy paths
 - [ ] **Documentation**: Error conditions documented
 - [ ] **Logging**: Errors logged with sufficient context
 
@@ -488,9 +844,18 @@ Before completing your task, verify:
 | Async operation | Always await or .catch() |
 | Configuration | Validate at startup |
 | Type unknown | Use `unknown` + type guards |
-| Resource (file/socket) | Use finally or `using` |
+| Resource (file/socket) | Use `using` (TS 5.2+) or `finally` |
 | State machine | Discriminated unions |
 | Error context | Include error cause chain |
+| **Background job** | **Never `void asyncFn()`, always await** |
+| **Server Action** | **Return `{error}` or `{data}`, never throw** |
+| **Client validation** | **Valibot (600B) over Zod (14KB)** |
+| **Image rendering** | **Explicit width/height, lazy loading** |
+| **Heavy computation** | **Web Worker or requestIdleCallback** |
+| **Auth endpoint** | **Rate limiting middleware** |
+| **User content** | **Escape HTML/JS before render** |
+| **Literal types** | **Use `const` type params (TS 5.0+)** |
+| **Config objects** | **Use `satisfies` (TS 4.9+)** |
 
 ## Further Reading
 
