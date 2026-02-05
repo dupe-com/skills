@@ -333,7 +333,11 @@ function installBiome(rootDir, packageManager) {
     throw new Error(`Unknown package manager: ${packageManager}`);
   }
 
-  execSync(command, { cwd: rootDir, stdio: 'inherit' });
+  try {
+    execSync(command, { cwd: rootDir, stdio: 'inherit' });
+  } catch (e) {
+    throw new Error(`Failed to install Biome: ${e.message}`);
+  }
 }
 
 function removeOldPackages(rootDir, packageManager) {
@@ -372,7 +376,11 @@ function removeOldPackages(rootDir, packageManager) {
     throw new Error(`Unknown package manager: ${packageManager}`);
   }
 
-  execSync(command, { cwd: rootDir, stdio: 'inherit' });
+  try {
+    execSync(command, { cwd: rootDir, stdio: 'inherit' });
+  } catch (e) {
+    throw new Error(`Failed to remove packages: ${e.message}`);
+  }
 
   return toRemove;
 }
@@ -446,8 +454,13 @@ async function main() {
   step('Generating biome.json configuration...');
   const biomeConfig = generateBiomeConfig();
   const biomeConfigPath = path.join(rootDir, 'biome.json');
-  fs.writeFileSync(biomeConfigPath, JSON.stringify(biomeConfig, null, 2) + '\n');
-  success('Created biome.json');
+  try {
+    fs.writeFileSync(biomeConfigPath, JSON.stringify(biomeConfig, null, 2) + '\n');
+    success('Created biome.json');
+  } catch (e) {
+    error(`Failed to write biome.json: ${e.message}`);
+    process.exit(1);
+  }
   
   // Step 6: Update package.json
   step('Updating package.json scripts...');
@@ -516,6 +529,11 @@ async function main() {
 main().catch(err => {
   error('\nMigration failed:');
   error(err.message);
-  console.error(err);
+  // Only show full stack trace in debug mode to avoid overwhelming users
+  if (process.env.DEBUG) {
+    console.error(err);
+  } else {
+    info('Set DEBUG=1 for full stack trace');
+  }
   process.exit(1);
 });

@@ -203,8 +203,13 @@ function validateSkillMd(filePath) {
   if (fs.existsSync(referencesDir)) {
     try {
       const refFiles = fs.readdirSync(referencesDir);
-      info.push(`References: ${refFiles.length} file(s) (${refFiles.join(', ')})`);
+      if (refFiles.length > 0) {
+        info.push(`References: ${refFiles.length} file(s) (${refFiles.join(', ')})`);
+      } else {
+        warnings.push('References directory exists but is empty');
+      }
     } catch (e) {
+      // Log with context for debugging, but continue validation
       warnings.push(`Could not read references directory: ${e.message}`);
     }
   }
@@ -214,8 +219,13 @@ function validateSkillMd(filePath) {
   if (fs.existsSync(scriptsDir)) {
     try {
       const scriptFiles = fs.readdirSync(scriptsDir);
-      info.push(`Scripts: ${scriptFiles.length} file(s) (${scriptFiles.join(', ')})`);
+      if (scriptFiles.length > 0) {
+        info.push(`Scripts: ${scriptFiles.length} file(s) (${scriptFiles.join(', ')})`);
+      } else {
+        warnings.push('Scripts directory exists but is empty');
+      }
     } catch (e) {
+      // Log with context for debugging, but continue validation
       warnings.push(`Could not read scripts directory: ${e.message}`);
     }
   }
@@ -255,4 +265,13 @@ function printResults(errors, warnings, info) {
 const args = process.argv.slice(2);
 const skillPath = args[0] || 'SKILL.md';
 
-validateSkillMd(skillPath);
+// Wrap main execution in try/catch to ensure graceful exit
+try {
+  validateSkillMd(skillPath);
+} catch (e) {
+  log(`\n✗ Unexpected error during validation: ${e.message}`, 'red');
+  if (process.env.DEBUG) {
+    console.error(e);
+  }
+  process.exit(1);
+}
