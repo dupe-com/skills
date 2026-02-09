@@ -127,7 +127,7 @@ description: What it does and when to use it
 1. **Keep SKILL.md under 500 lines** - Move detailed docs to `references/`
 2. **Write for agents** - Clear, actionable instructions
 3. **Include examples** - Show both ❌ BAD and ✅ GOOD patterns
-4. **Test your skill** - Run `node scripts/validate-skill.js` if available
+4. **Test your skill** - Run `node scripts/validate-skill.cjs` if available
 
 ---
 

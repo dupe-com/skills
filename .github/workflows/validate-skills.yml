@@ -63,7 +63,10 @@ jobs:
               fi
               
               # Run skill-specific validator if exists
-              if [ -f "${skill_dir}scripts/validate-skill.js" ]; then
+              if [ -f "${skill_dir}scripts/validate-skill.cjs" ]; then
+                echo "  🔧 Running custom validator..."
+                node "${skill_dir}scripts/validate-skill.cjs" "${skill_dir}SKILL.md" || exit 1
+              elif [ -f "${skill_dir}scripts/validate-skill.js" ]; then
                 echo "  🔧 Running custom validator..."
                 node "${skill_dir}scripts/validate-skill.js" "${skill_dir}SKILL.md" || exit 1
               fi

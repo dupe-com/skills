@@ -12,7 +12,7 @@
  * - Single tool for linting + formatting
  * - Compatible with most ESLint rules
  *
- * Usage: node scripts/migrate-to-biome.js
+ * Usage: node scripts/migrate-to-biome.cjs
  *
  * What it does:
  * 1. Checks for existing ESLint/Prettier config

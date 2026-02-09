@@ -3,7 +3,7 @@
 /**
  * Validate SKILL.md against agentskills.io specification
  *
- * Usage: node scripts/validate-skill.js [path-to-SKILL.md]
+ * Usage: node scripts/validate-skill.cjs [path-to-SKILL.md]
  *
  * Validates:
  * - YAML frontmatter structure (starts/ends with ---)
