@@ -47,6 +47,25 @@ Error prevention and best practices enforcement for AI agent-assisted coding.
 - Model configuration recommendations (Claude 3.5+, GPT-4+, extended thinking)
 - 60KB+ of reference documentation
 
+### [ascii-renderer](./skills/ascii-renderer)
+
+Generate ASCII art from images or text using shape vector rendering.
+
+**Use when:**
+
+- Creating ASCII text banners for terminals, READMEs, or CLI tools
+- Converting images to ASCII art with high-quality edge detection
+- Building terminal splash screens or headers
+- Generating retro/terminal aesthetic text
+
+**Features:**
+
+- Text-to-ASCII with customizable fonts (Arial Black, Impact, etc.)
+- Image-to-ASCII conversion with sharp edge detection
+- Shape vector algorithm for superior quality vs traditional brightness mapping
+- Adjustable contrast, size, and invert options
+- Built-in demo mode
+
 ---
 
 ## Installation
