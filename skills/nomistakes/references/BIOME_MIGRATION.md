@@ -82,7 +82,7 @@ The easiest way to migrate is using the automated script:
 
 ```bash
 # Run migration script
-node scripts/migrate-to-biome.js
+node scripts/migrate-to-biome.cjs
 ```
 
 **What the script does:**
@@ -581,7 +581,7 @@ Use this checklist to ensure a smooth migration:
   - [ ] Inform team members about the migration
 
 - [ ] **Migration**
-  - [ ] Run `node scripts/migrate-to-biome.js`
+  - [ ] Run `node scripts/migrate-to-biome.cjs`
   - [ ] Review generated `biome.json`
   - [ ] Test: `npm run check`
   - [ ] Fix auto-fixable issues: `npm run check:fix`

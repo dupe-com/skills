@@ -10,13 +10,7 @@
     "https://www.typescriptlang.org/docs/",
     "https://effect.website"
   ],
-  "compatibility": [
-    "claude-code",
-    "opencode",
-    "cursor",
-    "goose",
-    "amp"
-  ],
+  "compatibility": ["claude-code", "opencode", "cursor", "goose", "amp"],
   "tags": [
     "error-prevention",
     "best-practices",

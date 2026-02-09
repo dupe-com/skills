@@ -92,8 +92,8 @@ async function createUser(
 
 | Script | Description |
 |--------|-------------|
-| `scripts/validate-skill.js` | Validate SKILL.md against agentskills.io spec |
-| `scripts/migrate-to-biome.js` | Automated ESLint/Prettier → Biome migration |
+| `scripts/validate-skill.cjs` | Validate SKILL.md against agentskills.io spec |
+| `scripts/migrate-to-biome.cjs` | Automated ESLint/Prettier → Biome migration |
 
 ## License
 
