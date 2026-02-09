@@ -6,11 +6,30 @@ Skills follow the [Agent Skills](https://agentskills.io/) specification.
 
 ## Available Skills
 
+### [dupe](./skills/dupe)
+
+Find similar products using dupe.com's visual search API.
+
+**Use when:**
+
+- User provides a product URL and asks for similar/alternative products
+- User shares an image URL and wants to find matching items
+- Searching for dupes, alternatives, or look-alikes
+
+**Features:**
+
+- Product URL search via dupe.com API
+- Direct image URL search capability
+- Returns matches with prices, store info, and direct links
+- Provides similarity scores and product rankings
+- Generates dupe.com result page links
+
 ### [nomistakes](./skills/nomistakes)
 
 Error prevention and best practices enforcement for AI agent-assisted coding.
 
 **Use when:**
+
 - Writing new code or functions
 - Refactoring existing code
 - Implementing API integrations
@@ -19,6 +38,7 @@ Error prevention and best practices enforcement for AI agent-assisted coding.
 - Reviewing AI-generated code
 
 **Features:**
+
 - 10 core error prevention principles
 - Input validation, null safety, async handling
 - TypeScript strict mode patterns
@@ -78,7 +98,7 @@ Use the template in [`template/SKILL.md`](./template/SKILL.md) as a starting poi
 
 ```yaml
 ---
-name: my-skill-name      # lowercase-hyphenated
+name: my-skill-name # lowercase-hyphenated
 description: What it does and when to use it
 ---
 ```
