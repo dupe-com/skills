@@ -1,10 +1,12 @@
 ---
 name: dupe-research
-description: Start AI-powered product research tasks on dupe.com. Kick off deep product research with archetype-based personas, track progress, and get comprehensive reports with product recommendations, pricing, and editorial articles.
-compatibility: Requires curl, shasum (or openssl), and internet access. Agent must solve a BOTCHA speed challenge to authenticate — no SDKs or packages needed.
+description: Start AI-powered product research tasks on dupe.com. Kick off deep product research with archetype-based personas, track progress, and get comprehensive reports with product recommendations, pricing, and editorial articles. Use when the user wants to research, compare, or find the best products in a category.
+compatibility:
+  - Requires curl, shasum (or openssl), and internet access
+  - Agent must solve a BOTCHA speed challenge to authenticate — no SDKs or packages needed
 metadata:
   author: dupe.com
-  version: '1.0'
+  version: 1.0.0
 ---
 
 # Dupe.com AI Product Research
