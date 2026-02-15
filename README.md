@@ -24,6 +24,26 @@ Find similar products using dupe.com's visual search API.
 - Provides similarity scores and product rankings
 - Generates dupe.com result page links
 
+### [dupe-research](./skills/dupe-research)
+
+Launch AI-powered product research tasks from your agent — the same pipeline that powers dupe.com.
+
+**Use when:**
+
+- Researching the best products in a category ("best wireless earbuds under $100")
+- Comparing products with specific priorities (value, quality, reviews, etc.)
+- Getting AI-powered product recommendations with detailed reasoning
+- Generating a comprehensive research report for a product category
+
+**Features:**
+
+- 5 research archetypes (deal hunter, quality-first, quick pick, social proof, deep research)
+- Real-time progress tracking across 9 research phases
+- Returns product candidates with pricing, images, and brand info
+- Generates full editorial research articles
+- Links to published report pages on dupe.com
+- Protected by [BOTCHA](https://botcha.ai) — agent solves a speed challenge to authenticate (no API keys or SDKs needed)
+
 ### [nomistakes](./skills/nomistakes)
 
 Error prevention and best practices enforcement for AI agent-assisted coding.
@@ -70,26 +90,23 @@ Generate ASCII art from images or text using shape vector rendering.
 
 ## Installation
 
-### Claude Code
+Install any skill with a single command via [skills.sh](https://skills.sh):
 
 ```bash
-# Install a specific skill
-npx skills add dupe-com/skills/skills/nomistakes
+npx skills add dupe-com/skills/dupe-research
+npx skills add dupe-com/skills/dupe
+npx skills add dupe-com/skills/nomistakes
+npx skills add dupe-com/skills/ascii-renderer
+```
 
-# Or copy directly to your skills directory
+This works with Claude Code, OpenCode, Cursor, Windsurf, Cline, Codex, AMP, Copilot, and any agent that supports the [agentskills.io](https://agentskills.io) standard.
+
+### Manual Installation
+
+```bash
 git clone https://github.com/dupe-com/skills.git
-cp -r skills/skills/nomistakes ~/.claude/skills/
+cp -r skills/skills/<skill-name> ~/.claude/skills/
 ```
-
-### OpenCode
-
-```bash
-npx skills add dupe-com/skills/skills/nomistakes
-```
-
-### Other Compatible Agents
-
-Any agent supporting the [agentskills.io](https://agentskills.io) standard can use these skills. Check your agent's documentation for skill installation instructions.
 
 ---
 
