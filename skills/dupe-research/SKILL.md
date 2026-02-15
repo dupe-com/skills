@@ -6,7 +6,7 @@ compatibility:
   - Agent must solve a BOTCHA speed challenge to authenticate — no SDKs or packages needed
 metadata:
   author: dupe.com
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Dupe.com AI Product Research
@@ -37,43 +37,18 @@ Use this skill when the user wants to:
 - For finding visual dupes/lookalikes of a specific product URL — use the `dupe` skill instead
 - For quick price comparisons without deep research
 
-## Prerequisites
+## IMPORTANT: Run as a Background Task
 
-This endpoint is protected by [BOTCHA](https://botcha.ai) — a reverse CAPTCHA that proves the caller is an AI agent. You only need `curl` and a way to compute SHA-256 hashes (e.g. `shasum`, `openssl`).
+Research takes 2-5 minutes. **Do NOT poll in the main conversation thread.** Instead:
 
-### Authenticating with BOTCHA
+1. Ask the user to pick an archetype (Step 1 below)
+2. **Spawn a background agent / subagent / task** to handle Steps 2-4 (auth, start, poll, return results)
+3. Tell the user: "Research is running in the background. I'll share results when it's ready."
+4. Continue the conversation — the background task will complete on its own
 
-**1. Request a challenge:**
+**For Claude Code:** Use the `Task` tool with `subagent_type: "general"` and pass the full research prompt (query, archetype, instructions from Steps 2-4).
 
-```bash
-CHALLENGE=$(curl -s "https://botcha.ai/v1/token?app_id=dupe-research")
-```
-
-The response contains a challenge `id` and an array of `numbers` (5 integers).
-
-**2. Solve:** compute the SHA-256 of each number and take the **first 8 hex characters**:
-
-```bash
-# For each number in the challenge:
-printf '%s' "12345" | shasum -a 256 | cut -c1-8
-```
-
-**3. Submit answers** (must complete within 500ms of receiving the challenge):
-
-```bash
-TOKEN=$(curl -s -X POST "https://botcha.ai/v1/token/verify" \
-  -H "Content-Type: application/json" \
-  -d '{"id":"<challenge_id>","answers":["<hash1>","<hash2>","<hash3>","<hash4>","<hash5>"]}' \
-  | jq -r '.access_token')
-```
-
-Include the token as a Bearer header in all API requests:
-
-```
-Authorization: Bearer $TOKEN
-```
-
-Tokens expire in **1 hour**. If you get a `401`, re-solve a challenge to get a fresh token.
+**For OpenCode / Cursor / other agents:** Use whatever background task or subagent mechanism is available. If none exists, warn the user that polling will block the thread for a few minutes.
 
 ## Instructions
 
@@ -81,8 +56,8 @@ Tokens expire in **1 hour**. If you get a `401`, re-solve a challenge to get a f
 
 Before starting a research task, ask the user which research style they prefer. Present these options:
 
-| Option | Label | Pass this as `archetype` |
-|--------|-------|--------------------------|
+| # | Label | Pass this as `archetype` |
+|---|-------|--------------------------|
 | 1 | **Best Value (Deal Hunter)** | `Shoppers who prioritize getting the best price-to-quality ratio. They compare prices across retailers, look for sales and discounts, and want products that deliver good performance without overpaying. Budget-conscious but quality-aware. Typical budget: $50-$150.` |
 | 2 | **Highest Quality Only** | `Shoppers who only want the absolute best version of a product. They prioritize premium materials, superior construction, and long-term durability. Price is secondary to quality. They read expert reviews and trust established premium brands. Typical budget: $200+.` |
 | 3 | **Just Tell Me Which One** | `Busy shoppers who want a clear, confident recommendation without spending hours researching. They trust expert guidance and want a single "best" option that works for most people. They value convenience and quick decision-making over deep analysis.` |
@@ -91,83 +66,81 @@ Before starting a research task, ask the user which research style they prefer. 
 
 If the user doesn't specify a preference, default to option 5 (Deep Research & Comparison).
 
-### Step 2: Start the Research Task
+### Step 2: Authenticate with BOTCHA
+
+The API is protected by [BOTCHA](https://botcha.ai) — a reverse CAPTCHA for AI agents. Run this **single command** to get a token. It fetches the challenge, solves all 5 SHA-256 hashes, and submits the answer — all in one shot:
 
 ```bash
-curl -X POST https://api.dupe.com/api/research/agent-skill/start \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BOTCHA_TOKEN>" \
-  -d '{
-    "title": "<user search query>",
-    "archetype": "<full archetype description from table above>",
-    "count": 10
-  }'
+TOKEN=$(python3 -c "
+import urllib.request, json, hashlib
+headers = {'User-Agent': 'dupe-research-skill/1.1', 'Content-Type': 'application/json'}
+req = urllib.request.Request('https://botcha.ai/v1/token', headers=headers)
+with urllib.request.urlopen(req) as r:
+    data = json.loads(r.read())
+ch = data['challenge']
+answers = [hashlib.sha256(str(p['num']).encode()).hexdigest()[:8] for p in ch['problems']]
+payload = json.dumps({'id': ch['id'], 'answers': answers, 'audience': 'https://api.dupe.com'}).encode()
+req2 = urllib.request.Request('https://botcha.ai/v1/token/verify', data=payload, headers=headers, method='POST')
+with urllib.request.urlopen(req2) as r2:
+    result = json.loads(r2.read())
+print(result.get('access_token', ''))
+")
+echo "Token obtained: ${TOKEN:0:20}..."
 ```
 
-**Request body:**
+**Critical details:**
+- The `audience` field MUST be `"https://api.dupe.com"` — without it the token will be rejected by the API
+- The `User-Agent` header is required — BOTCHA returns 403 without it
+- The entire solve must complete within 500ms of receiving the challenge — python3 handles this easily in a single script
+- Tokens expire in 1 hour. If you get a `401`, re-run this command
+- Uses only `python3` (available on macOS and Linux) — no `jq`, `node`, or other dependencies
+
+### Step 3: Start the Research Task
+
+```bash
+RESULT=$(curl -s -X POST "https://api.dupe.com/api/research/agent-skill/start" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{
+    \"title\": \"<USER_SEARCH_QUERY>\",
+    \"archetype\": \"<FULL_ARCHETYPE_DESCRIPTION>\",
+    \"count\": 10
+  }")
+TASK_ID=$(echo "$RESULT" | sed -n 's/.*"taskId":"\([^"]*\)".*/\1/p')
+REPORT_URL=$(echo "$RESULT" | sed -n 's/.*"reportUrl":"\([^"]*\)".*/\1/p')
+echo "Task: $TASK_ID"
+echo "Report will be at: $REPORT_URL"
+```
+
+**Request body fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `title` | string | Yes | The user's search query (min 5 characters). Example: "best noise cancelling headphones" |
-| `archetype` | string | Yes | Full archetype description from the table above (min 10 characters). Do NOT pass the label — pass the full description text. |
+| `title` | string | Yes | The user's search query (min 5 characters) |
+| `archetype` | string | Yes | Full archetype description from table above (NOT the label) |
 | `count` | number | No | Number of products to research (2-20, default: 10) |
-
-**Response (202 Accepted):**
-
-```json
-{
-  "taskId": "best-noise-cancelling-headphones-feb2026",
-  "status": "queued",
-  "message": "Research job queued successfully",
-  "pollUrl": "/api/research/agent-skill/best-noise-cancelling-headphones-feb2026/status",
-  "reportUrl": "https://dupe.com/research/best-noise-cancelling-headphones-feb2026"
-}
-```
 
 If a task with the same title already exists for this month, the API returns the existing task (200) so you can resume polling.
 
-### Step 3: Poll for Status
+### Step 4: Poll Until Complete
 
-Poll the status endpoint every **5-10 seconds** until the task reaches a terminal state.
+Run this polling loop. It checks every 10 seconds and exits when research reaches a terminal state:
 
 ```bash
-curl https://api.dupe.com/api/research/agent-skill/<taskId>/status \
-  -H "Authorization: Bearer <BOTCHA_TOKEN>"
-```
-
-**Response:**
-
-```json
-{
-  "taskId": "best-noise-cancelling-headphones-feb2026",
-  "title": "Best Noise Cancelling Headphones",
-  "status": "gather",
-  "currentPhase": "gather",
-  "progress": 45,
-  "message": "Gathering product details...",
-  "productsTotal": 10,
-  "productsComplete": 4,
-  "productsFailed": 0,
-  "candidates": [
-    {
-      "slug": "sony-wh-1000xm5",
-      "name": "Sony WH-1000XM5",
-      "brand": "Sony",
-      "image": "https://...",
-      "priceLow": 278,
-      "priceHigh": 399,
-      "msrp": 399,
-      "currency": "USD"
-    }
-  ],
-  "reportUrl": null,
-  "articleReady": false,
-  "brief": "## Research Brief\n...",
-  "article": null,
-  "createdAt": "2026-02-15T10:00:00Z",
-  "updatedAt": "2026-02-15T10:02:30Z",
-  "completedAt": null
-}
+while true; do
+  STATUS_JSON=$(curl -s "https://api.dupe.com/api/research/agent-skill/$TASK_ID/status" \
+    -H "Authorization: Bearer $TOKEN")
+  PROGRESS=$(echo "$STATUS_JSON" | sed -n 's/.*"progress":\([0-9]*\).*/\1/p')
+  TASK_STATUS=$(echo "$STATUS_JSON" | sed -n 's/.*"status":"\([^"]*\)".*/\1/p')
+  PHASE=$(echo "$STATUS_JSON" | sed -n 's/.*"currentPhase":"\([^"]*\)".*/\1/p')
+  echo "[$PROGRESS%] $PHASE — $TASK_STATUS"
+  case "$TASK_STATUS" in
+    researched|published|complete|failed|cancelled) break ;;
+  esac
+  sleep 10
+done
+echo "Final status: $TASK_STATUS"
+echo "$STATUS_JSON"
 ```
 
 **Research phases (in order):**
@@ -194,9 +167,9 @@ curl https://api.dupe.com/api/research/agent-skill/<taskId>/status \
 | `failed` | Research failed (check error message) |
 | `cancelled` | Task was cancelled |
 
-### Step 4: Present Results
+### Step 5: Present Results
 
-When the task reaches a terminal status (`researched`, `published`, or `complete`), present the results:
+When the task reaches a terminal status, parse the final `STATUS_JSON` and present:
 
 ```
 ## Research Complete: <title>
@@ -227,57 +200,10 @@ If `reportUrl` is available, always include it — it links to a beautifully for
 
 | Status Code | Meaning | Action |
 |-------------|---------|--------|
-| 401 | BOTCHA token missing/invalid/expired | Re-solve a BOTCHA challenge |
+| 401 | BOTCHA token missing/invalid/expired | Re-run the BOTCHA auth command from Step 2 |
 | 400 | Invalid request body | Check title (min 5 chars) and archetype (min 10 chars) |
 | 404 | Task not found | Verify the taskId is correct |
 | 500 | Server error | Retry after a few seconds |
-
-## Example: Full Workflow
-
-```bash
-# 1. Get BOTCHA token
-CHALLENGE=$(curl -s "https://botcha.ai/v1/token?app_id=dupe-research")
-CHALLENGE_ID=$(echo $CHALLENGE | jq -r '.id')
-# Solve: SHA-256 each number, first 8 hex chars
-# Example: printf '%s' "12345" | shasum -a 256 | cut -c1-8
-TOKEN=$(curl -s -X POST "https://botcha.ai/v1/token/verify" \
-  -H "Content-Type: application/json" \
-  -d "{\"id\":\"$CHALLENGE_ID\",\"answers\":[\"hash1\",\"hash2\",\"hash3\",\"hash4\",\"hash5\"]}" \
-  | jq -r '.access_token')
-
-# 2. Start research
-RESULT=$(curl -s -X POST https://api.dupe.com/api/research/agent-skill/start \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "title": "best robot vacuum for pet hair",
-    "archetype": "Shoppers who heavily rely on customer reviews, ratings, and real user experiences. They read both positive and negative reviews, look for patterns in feedback, and trust the wisdom of the crowd over marketing claims. They want products with 4+ star ratings and hundreds of reviews.",
-    "count": 10
-  }')
-
-TASK_ID=$(echo $RESULT | jq -r '.taskId')
-
-# 3. Poll until complete
-while true; do
-  STATUS=$(curl -s "https://api.dupe.com/api/research/agent-skill/$TASK_ID/status" \
-    -H "Authorization: Bearer $TOKEN")
-
-  PROGRESS=$(echo $STATUS | jq -r '.progress')
-  TASK_STATUS=$(echo $STATUS | jq -r '.status')
-
-  echo "Progress: $PROGRESS% — Status: $TASK_STATUS"
-
-  if [[ "$TASK_STATUS" == "researched" || "$TASK_STATUS" == "published" || "$TASK_STATUS" == "complete" || "$TASK_STATUS" == "failed" ]]; then
-    break
-  fi
-
-  sleep 10
-done
-
-# 4. Show results
-echo $STATUS | jq '.candidates'
-echo "Report: $(echo $STATUS | jq -r '.reportUrl')"
-```
 
 ## Links
 
