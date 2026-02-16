@@ -2,11 +2,12 @@
 name: dupe-research
 description: Start AI-powered product research tasks on dupe.com. Kick off deep product research with archetype-based personas, track progress, and get comprehensive reports with product recommendations, pricing, and editorial articles. Use when the user wants to research, compare, or find the best products in a category.
 compatibility:
-  - Requires curl, shasum (or openssl), and internet access
+  - Requires curl, python3, and internet access
+  - One-time browser sign-in required for user authentication (token saved locally for 30 days)
   - Agent must solve a BOTCHA speed challenge to authenticate — no SDKs or packages needed
 metadata:
   author: dupe.com
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Dupe.com AI Product Research
@@ -52,6 +53,63 @@ Research takes 2-5 minutes. **Do NOT poll in the main conversation thread.** Ins
 
 ## Instructions
 
+### Step 0: Authenticate User (One-Time)
+
+Before using the API, check if the user has a saved auth token. This is a one-time browser sign-in that produces a 30-day JWT.
+
+**Check for existing token:**
+
+```bash
+USER_TOKEN=$(python3 -c "
+import json, os, time, base64
+path = os.path.expanduser('~/.dupe/auth.json')
+if not os.path.exists(path):
+    exit(1)
+data = json.load(open(path))
+token = data.get('token', '')
+# Check expiry (JWT payload is base64-encoded second segment)
+payload = json.loads(base64.urlsafe_b64decode(token.split('.')[1] + '=='))
+if payload.get('exp', 0) < time.time():
+    exit(1)
+print(token)
+" 2>/dev/null) || USER_TOKEN=""
+```
+
+**If no token (or expired), run the auth flow:**
+
+```bash
+if [ -z "$USER_TOKEN" ]; then
+  # Step 1: Initiate auth session
+  AUTH_RESPONSE=$(curl -s -X POST "https://api.dupe.com/api/cli-auth/initiate")
+  SESSION_ID=$(echo "$AUTH_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionId'])")
+  AUTH_URL=$(echo "$AUTH_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['authUrl'])")
+  POLL_URL=$(echo "$AUTH_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['pollUrl'])")
+
+  # Step 2: Tell the user to open the URL in their browser
+  echo "Please open this URL to sign in: $AUTH_URL"
+
+  # Step 3: Poll until verified (15 minute timeout)
+  while true; do
+    STATUS_RESPONSE=$(curl -s "$POLL_URL")
+    STATUS=$(echo "$STATUS_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
+    if [ "$STATUS" = "verified" ]; then
+      USER_TOKEN=$(echo "$STATUS_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+      mkdir -p ~/.dupe
+      echo "{\"token\": \"$USER_TOKEN\"}" > ~/.dupe/auth.json
+      echo "Authenticated successfully."
+      break
+    fi
+    sleep 3
+  done
+fi
+```
+
+**Important:**
+- The user only needs to do this once per 30 days
+- The token is saved to `~/.dupe/auth.json` and reused automatically
+- Tell the user to open the URL — do NOT open it silently
+- The auth session expires after 15 minutes if not completed
+
 ### Step 1: Choose an Archetype
 
 Before starting a research task, ask the user which research style they prefer. Present these options:
@@ -73,13 +131,14 @@ The API is protected by [BOTCHA](https://botcha.ai) — a reverse CAPTCHA for AI
 ```bash
 TOKEN=$(python3 -c "
 import urllib.request, json, hashlib
+APP_ID = 'app_b397bc17769877f7'
 headers = {'User-Agent': 'dupe-research-skill/1.1', 'Content-Type': 'application/json'}
-req = urllib.request.Request('https://botcha.ai/v1/token', headers=headers)
+req = urllib.request.Request(f'https://botcha.ai/v1/token?app_id={APP_ID}', headers=headers)
 with urllib.request.urlopen(req) as r:
     data = json.loads(r.read())
 ch = data['challenge']
 answers = [hashlib.sha256(str(p['num']).encode()).hexdigest()[:8] for p in ch['problems']]
-payload = json.dumps({'id': ch['id'], 'answers': answers, 'audience': 'https://api.dupe.com'}).encode()
+payload = json.dumps({'id': ch['id'], 'answers': answers, 'audience': 'https://api.dupe.com', 'app_id': APP_ID}).encode()
 req2 = urllib.request.Request('https://botcha.ai/v1/token/verify', data=payload, headers=headers, method='POST')
 with urllib.request.urlopen(req2) as r2:
     result = json.loads(r2.read())
@@ -101,6 +160,7 @@ echo "Token obtained: ${TOKEN:0:20}..."
 RESULT=$(curl -s -X POST "https://api.dupe.com/api/research/agent-skill/start" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
+  -H "X-User-Auth: $USER_TOKEN" \
   -d "{
     \"title\": \"<USER_SEARCH_QUERY>\",
     \"archetype\": \"<FULL_ARCHETYPE_DESCRIPTION>\",
@@ -129,7 +189,8 @@ Run this polling loop. It checks every 10 seconds and exits when research reache
 ```bash
 while true; do
   STATUS_JSON=$(curl -s "https://api.dupe.com/api/research/agent-skill/$TASK_ID/status" \
-    -H "Authorization: Bearer $TOKEN")
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-User-Auth: $USER_TOKEN")
   PROGRESS=$(echo "$STATUS_JSON" | sed -n 's/.*"progress":\([0-9]*\).*/\1/p')
   TASK_STATUS=$(echo "$STATUS_JSON" | sed -n 's/.*"status":"\([^"]*\)".*/\1/p')
   PHASE=$(echo "$STATUS_JSON" | sed -n 's/.*"currentPhase":"\([^"]*\)".*/\1/p')
