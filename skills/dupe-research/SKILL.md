@@ -38,18 +38,22 @@ Use this skill when the user wants to:
 - For finding visual dupes/lookalikes of a specific product URL — use the `dupe` skill instead
 - For quick price comparisons without deep research
 
-## IMPORTANT: Run as a Background Task
+## Background or Foreground?
 
-Research takes 2-5 minutes. **Do NOT poll in the main conversation thread.** Instead:
+Research takes 2-5 minutes. After the user picks an archetype, ask them:
 
-1. Ask the user to pick an archetype (Step 1 below)
-2. **Spawn a background agent / subagent / task** to handle Steps 2-4 (auth, start, poll, return results)
-3. Tell the user: "Research is running in the background. I'll share results when it's ready."
-4. Continue the conversation — the background task will complete on its own
+> "Research takes a few minutes. Want me to run it in the background so we can keep chatting, or wait here for results?"
 
-**For Claude Code:** Use the `Task` tool with `subagent_type: "general"` and pass the full research prompt (query, archetype, instructions from Steps 2-4).
+**If background:**
+1. Spawn a background agent / subagent / task to handle Steps 0-5
+2. Tell the user: "Research is running in the background. I'll share results when it's ready."
+3. Continue the conversation — the background task will complete on its own
+4. **For Claude Code:** Use the `Task` tool with `subagent_type: "general"` and pass the full research prompt (query, archetype, instructions from Steps 0-5)
+5. **For other agents:** Use whatever background task or subagent mechanism is available
 
-**For OpenCode / Cursor / other agents:** Use whatever background task or subagent mechanism is available. If none exists, warn the user that polling will block the thread for a few minutes.
+**If foreground:**
+1. Run Steps 0-5 directly in the conversation thread
+2. Warn the user that polling will block the thread for a few minutes
 
 ## Instructions
 
