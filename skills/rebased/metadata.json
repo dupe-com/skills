@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "organization": "Dupe.com",
+  "author": "Ramin Bozorgzadeh",
+  "date": "May 2026",
+  "abstract": "Rebases the current branch onto origin/main and intelligently resolves merge conflicts one commit at a time. Understands both sides of each conflict, merges intent rather than blindly picking a side, regenerates lock files and generated files, and reports what was resolved. Never force-pushes without confirmation.",
+  "references": [
+    "https://agentskills.io/specification",
+    "https://git-scm.com/docs/git-rebase"
+  ],
+  "compatibility": ["claude-code", "opencode", "cursor", "amp"],
+  "tags": [
+    "git",
+    "rebase",
+    "conflict-resolution",
+    "workflow"
+  ]
+}
