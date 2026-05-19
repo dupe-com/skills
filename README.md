@@ -67,6 +67,43 @@ Error prevention and best practices enforcement for AI agent-assisted coding.
 - Model configuration recommendations (Claude 3.5+, GPT-4+, extended thinking)
 - 60KB+ of reference documentation
 
+### [reviews](./skills/reviews)
+
+Address GitHub PR review feedback end-to-end from your agent.
+
+**Use when:**
+
+- User types `/reviews` or asks to "address review comments"
+- Going through inline PR feedback after a code review
+- Responding to a specific PR by number, URL, or branch name
+
+**Features:**
+
+- Fetches all reviews, inline comments, and conversation threads via REST + GraphQL
+- Triages actionable vs ambiguous items; skips already-resolved threads
+- Applies code changes, posts replies, and resolves threads incrementally
+- Surfaces ambiguous items and disagreements for human review before proceeding
+- Posts a structured summary comment to the PR
+- Never pushes — the human always reviews the commit and pushes
+
+### [rebased](./skills/rebased)
+
+Rebase the current branch onto `origin/main` and resolve conflicts intelligently.
+
+**Use when:**
+
+- User types `/rebased` or asks to "rebase and fix conflicts"
+- Branch has fallen behind main and needs to be brought up to date
+- A rebase is already in progress and needs help resolving remaining conflicts
+
+**Features:**
+
+- Pre-flight checks for dirty working tree, in-progress rebases, and edge cases
+- Merges both sides of each conflict by understanding intent, not blindly picking one
+- Regenerates lock files (`bun.lockb`, `package-lock.json`, etc.) rather than hand-merging
+- Works commit-by-commit through multi-step rebases
+- Never force-pushes without explicit user confirmation
+
 ### [ascii-renderer](./skills/ascii-renderer)
 
 Generate ASCII art from images or text using shape vector rendering.
@@ -97,6 +134,8 @@ npx skills add dupe-com/skills/dupe-research
 npx skills add dupe-com/skills/dupe
 npx skills add dupe-com/skills/nomistakes
 npx skills add dupe-com/skills/ascii-renderer
+npx skills add dupe-com/skills/reviews
+npx skills add dupe-com/skills/rebased
 ```
 
 This works with Claude Code, OpenCode, Cursor, Windsurf, Cline, Codex, AMP, Copilot, and any agent that supports the [agentskills.io](https://agentskills.io) standard.

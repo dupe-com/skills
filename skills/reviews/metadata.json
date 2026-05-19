@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "organization": "Dupe.com",
+  "author": "Ramin Bozorgzadeh",
+  "date": "May 2026",
+  "abstract": "End-to-end GitHub PR review workflow: fetches all review comments and inline threads via REST + GraphQL, triages actionable vs ambiguous items, applies code fixes, posts replies, resolves threads, and summarizes what was addressed in a PR comment. Designed to close review loops without pushing — the human reviews the commit and pushes.",
+  "references": [
+    "https://agentskills.io/specification",
+    "https://cli.github.com/manual/gh_pr_review",
+    "https://docs.github.com/en/graphql/reference/mutations#resolvereviewthread"
+  ],
+  "compatibility": ["claude-code", "opencode", "cursor", "amp"],
+  "tags": [
+    "github",
+    "pull-requests",
+    "code-review",
+    "workflow",
+    "git"
+  ]
+}
