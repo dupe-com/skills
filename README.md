@@ -123,6 +123,24 @@ Generate ASCII art from images or text using shape vector rendering.
 - Adjustable contrast, size, and invert options
 - Built-in demo mode
 
+### [note](./skills/note)
+
+Pin a short personal reminder to the Claude Code status line.
+
+**Use when:**
+
+- You type `/note <reminder>` (e.g. `/note revert the test-only flag before merging`)
+- You say "remind me to…", "note to self", "pin a note", "set a reminder"
+- You want to clear it: `/note clear`
+
+**Features:**
+
+- Synthesizes your input into a terse one-line reminder (strips filler)
+- Renders on its own status-line row as a bold black-on-yellow sticky note
+- Scoped to the current session — notes don't leak across Claude sessions
+- Persists across compactions/restarts until cleared
+- Ships an idempotent installer that wires the status line for you
+
 ---
 
 ## Installation
@@ -136,6 +154,7 @@ npx skills add dupe-com/skills/nomistakes
 npx skills add dupe-com/skills/ascii-renderer
 npx skills add dupe-com/skills/reviews
 npx skills add dupe-com/skills/rebased
+npx skills add dupe-com/skills/note
 ```
 
 This works with Claude Code, OpenCode, Cursor, Windsurf, Cline, Codex, AMP, Copilot, and any agent that supports the [agentskills.io](https://agentskills.io) standard.

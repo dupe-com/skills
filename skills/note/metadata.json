@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "organization": "Dupe.com",
+  "author": "Ramin Bozorgzadeh",
+  "date": "June 2026",
+  "abstract": "Pins a short personal reminder to the Claude Code status line. Synthesizes the user's input into a terse single line and renders it on its own status-line row with a bold black-on-yellow sticky-note background. Scoped to the current session (no cross-session leakage) and persists until cleared. Ships an idempotent installer that wires the status line.",
+  "references": [
+    "https://agentskills.io/specification",
+    "https://code.claude.com/docs/en/statusline"
+  ],
+  "compatibility": ["claude-code"],
+  "tags": [
+    "status-line",
+    "reminder",
+    "productivity",
+    "workflow",
+    "notes"
+  ]
+}
