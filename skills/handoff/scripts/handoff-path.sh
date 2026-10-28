@@ -252,10 +252,19 @@ fi
 # matches it, so unnamed sessions start clean. Real worktrees never reach this block.
 is_shared_dir() {
   case "$1" in
+    */.claude/worktrees/*) return 1 ;;
     */branches/main|*/branches/main/*|*/branches/master|*/branches/master/*) return 0 ;;
-    */branches/*|*/.claude/worktrees/*) return 1 ;;
+    */branches/*) return 1 ;;
   esac
-  [ -d "$1/branches" ] || [ -d "$1/.claude/worktrees" ]
+  [ -d "$1/branches" ] && return 0
+  # A folder holding .claude/worktrees/ is the main checkout itself, so a folder inside it
+  # (a session started in apps/web of a monorepo) is shared too.
+  local d="$1"
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    [ -d "$d/.claude/worktrees" ] && return 0
+    d=$(dirname "$d")
+  done
+  return 1
 }
 
 # This session's file in <config>/sessions/, named by the Claude process id. CLAUDE_PID,

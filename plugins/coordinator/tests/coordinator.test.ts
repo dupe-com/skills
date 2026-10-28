@@ -353,9 +353,12 @@ describe('coordinator helpers', () => {
     expect(groupOf('/r/app')).toBeUndefined()
     expect(memberFor([], '.claude/worktrees/auth-extra/src')).toBe('auth-extra')
     expect(memberFor([], `${wt}/auth-extra/`)).toBe('auth-extra')
+    const none = () => false
     const holds = (d: string) => d === '/r/app'
-    expect(isSharedFolder('/r/app', holds)).toBe(true)
-    expect(isSharedFolder(`${wt}/auth-coord`, holds)).toBe(false)
+    expect(isSharedFolder('/r/app', none, holds)).toBe(true)
+    expect(isSharedFolder('/r/app/apps/web', none, holds)).toBe(true)
+    expect(isSharedFolder(`${wt}/auth-coord`, none, holds)).toBe(false)
+    expect(isSharedFolder('/r/other', none, holds)).toBe(false)
     expect(accountOf('/home/.claude')).toBe('.claude')
     expect(accountOf('/home/.claude-work/')).toBe('.claude-work')
   })
@@ -568,7 +571,7 @@ describe('coordinator', () => {
     const seen: Seen = { filled: [], tools: [], titles: [] }
     engine(on, files, seen, { selfCwd: `${ROOT}/branches/auth-b` })
     const shared = '/home/.claude/coordinator-projects.json'
-    files[shared] = JSON.stringify({ '.claude-work': [{ name: 'auth', pattern: 'auth-*', emoji: '🌸', members: [], dropped: [] }] })
+    files[shared] = JSON.stringify({ '/home/.claude-work': [{ name: 'auth', pattern: 'auth-*', emoji: '🌸', members: [], dropped: [] }] })
 
     await $.session.start({ cwd: `${ROOT}/branches/auth-b`, surface: 'terminal', isInteractive: true })
     expect(seen.status?.at(-1)).toBe('🌸 auth · b')
@@ -577,7 +580,7 @@ describe('coordinator', () => {
 
     // The tab now carries our name; the project and the other auth builder go away; the next check gives the tab back.
     seen.tab = ['dev:@3', '🌸 b', '0']
-    files[shared] = JSON.stringify({ '.claude-work': [] })
+    files[shared] = JSON.stringify({ '/home/.claude-work': [] })
     delete files['/home/.claude-work/sessions/2.json']
     await seen.clock!.advance(60_000)
     expect(seen.status?.at(-1)).toBeUndefined()
@@ -592,7 +595,7 @@ describe('coordinator', () => {
     await $.session.start({ cwd: `${ROOT}/branches/auth-b`, surface: 'terminal', isInteractive: true })
     // A project made in this account reaches the other account's builders through the shared file.
     await coord($, 'project auth auth-* 🌸')
-    expect(JSON.parse(files['/home/.claude/coordinator-projects.json']!)['.claude'][0].emoji).toBe('🌸')
+    expect(JSON.parse(files['/home/.claude/coordinator-projects.json']!)['/home/.claude'][0].emoji).toBe('🌸')
     await seen.clock!.advance(60_000)
     expect(seen.status?.at(-1)).toBe('🌸 auth · b')
     expect((seen.tmux ?? []).some(a => a[0] === 'rename-window')).toBe(false)
@@ -653,7 +656,7 @@ describe('coordinator', () => {
     const seen: Seen = { filled: [], tools: [], titles: [] }
     engine(on, files, seen, { selfCwd: `${ROOT}/branches/auth-b` })
     files['/home/.claude/coordinator-projects.json'] = JSON.stringify({
-      '.claude-work': [{ name: 'authx', pattern: 'auth-*', emoji: '🌸', members: [], dropped: ['auth-b'] }],
+      '/home/.claude-work': [{ name: 'authx', pattern: 'auth-*', emoji: '🌸', members: [], dropped: ['auth-b'] }],
     })
     await $.session.start({ cwd: `${ROOT}/branches/auth-b`, surface: 'terminal', isInteractive: true })
     expect(seen.status?.at(-1)).toBeUndefined()

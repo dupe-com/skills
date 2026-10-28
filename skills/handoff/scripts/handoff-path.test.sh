@@ -9,7 +9,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 
-mkdir -p "$T/w/branches/main" "$T/w/branches/master" "$T/w/branches/auth-x" "$T/w/runs/x" "$T/r/.claude/worktrees/auth-y" "$T/handoffs" "$T/projects" "$T/sessions"
+mkdir -p "$T/w/branches/main" "$T/w/branches/master" "$T/w/branches/auth-x" "$T/w/runs/x" "$T/r/.claude/worktrees/auth-y" "$T/r/apps/web" "$T/handoffs" "$T/projects" "$T/sessions"
 ln -s branches/main "$T/w/main"
 W=$(cd "$T/w" && pwd -P)
 R=$(cd "$T/r" && pwd -P)
@@ -122,6 +122,10 @@ out=$(CLAUDE_PID=900010 pickup "$R" s10)
 session 900011 s11 "$R/.claude/worktrees/auth-y" "auth-y-1" derived
 p=$(CLAUDE_PID=900011 write_handoff "$R/.claude/worktrees/auth-y" y-note)
 [ "$p" = "$(old_key_dir "$R/.claude/worktrees/auth-y")/latest.md" ] && check "claude -w worktree: keyed by folder" ok || check "claude -w worktree: keyed by folder" fail "$p"
+
+session 900012 s12 "$R/apps/web" "web-2" derived
+p=$(CLAUDE_PID=900012 CLAUDE_CODE_SESSION_ID=s12 write_handoff "$R/apps/web" web-note)
+case "$p" in *"@unnamed-s12."*) check "subfolder of a main checkout with .claude/worktrees: shared" ok ;; *) check "subfolder of a main checkout with .claude/worktrees: shared" fail "$p" ;; esac
 
 # 8. With no CLAUDE_PID, the session file is found by walking up the process tree, but
 #    only on a Claude process: here a stale file whose pid a shell (this script) reuses.

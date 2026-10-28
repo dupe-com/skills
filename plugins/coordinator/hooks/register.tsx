@@ -313,7 +313,10 @@ export function accountOf(dir: string): string {
 // so a builder started on another account is found too.
 async function configDirs($: Host): Promise<string[]> {
   const home = (await $.env.get('HOME')) ?? ''
-  const extra = ((await $.env.get('CLAUDE_COORD_CONFIG_DIRS')) ?? '').split(':').filter(Boolean)
+  const extra = ((await $.env.get('CLAUDE_COORD_CONFIG_DIRS')) ?? '')
+    .split(':')
+    .filter(Boolean)
+    .map(d => (d === '~' || d.startsWith('~/') ? home + d.slice(1) : d))
   return [...new Set([await ownConfigDir($), `${home}/.claude`, ...extra].map(d => d.replace(/\/+$/, '')))]
 }
 
@@ -458,7 +461,8 @@ async function listProjects($: Host): Promise<CoordProject[]> {
 }
 
 // $.store is per account, and a builder may be on another one. Each account's projects are
-// copied, under its own key, to one file both read, so every builder can find its label.
+// copied, keyed by its full config folder path, to one file all read, so every builder can
+// find its label. The full path, not the short name: /a/.claude and /b/.claude are two accounts.
 // CLAUDE_COORD_PROJECTS moves it, so a test session's projects never label real builders.
 async function sharedPath($: Host): Promise<string> {
   return (await $.env.get('CLAUDE_COORD_PROJECTS')) || `${(await $.env.get('HOME')) ?? ''}/.claude/coordinator-projects.json`
@@ -474,18 +478,17 @@ async function readShared($: Host): Promise<Record<string, CoordProject[]>> {
 }
 
 async function shareProjects($: Host): Promise<void> {
-  const account = await ownAccount($)
   const all = await readShared($)
-  all[account] = await listProjects($)
+  all[await ownConfigDir($)] = await listProjects($)
   await $.fs.write(await sharedPath($), `${JSON.stringify(all, null, 2)}\n`).catch(() => {})
 }
 
 // This account's projects first, then the others'.
 async function allProjects($: Host): Promise<CoordProject[]> {
   const own = await listProjects($)
-  const account = await ownAccount($)
+  const ownDir = await ownConfigDir($)
   const shared = Object.entries(await readShared($))
-    .filter(([k, v]) => k !== account && Array.isArray(v))
+    .filter(([k, v]) => k !== ownDir && Array.isArray(v))
     .flatMap(([, v]) => v)
     .filter(p => p && typeof p.name === 'string' && typeof p.pattern === 'string' && Array.isArray(p.members) && Array.isArray(p.dropped))
     .map(p => ({ ...p, emoji: isEmoji(p.emoji) ? p.emoji : undefined }))
@@ -783,31 +786,42 @@ const nameKey = (name: string) => `active-name:${name}`
 // by name only. The handoff skill's handoff-path.sh draws the same line for /handoff notes.
 const MAIN_FOLDERS = ['main', 'master']
 
-// A worktree root is a folder holding .claude/worktrees/ or branches/, not just any folder
-// outside one. `<root>/main` is the symlink spelling of branches/main.
-export function isSharedFolder(cwd: string, holdsBranches: (dir: string) => boolean): boolean {
+// A worktree root is a folder holding branches/ or .claude/worktrees/, not just any folder
+// outside one. `<root>/main` is the symlink spelling of branches/main. A folder holding
+// .claude/worktrees/ is itself the main checkout, so any folder inside it is shared too
+// (a session started in apps/web of a monorepo); a branches/ root is only a wrapper folder.
+export function isSharedFolder(cwd: string, holdsBranches: (dir: string) => boolean, holdsWorktrees: (dir: string) => boolean = () => false): boolean {
   if (inWorktree(cwd)) return MAIN_FOLDERS.includes(folderOf(cwd))
   const dir = cwd.replace(/\/+$/, '')
   const parent = dir.slice(0, dir.lastIndexOf('/'))
-  return holdsBranches(dir) || (MAIN_FOLDERS.includes(dir.slice(parent.length + 1)) && holdsBranches(parent))
+  if (holdsBranches(dir) || (MAIN_FOLDERS.includes(dir.slice(parent.length + 1)) && holdsBranches(parent))) return true
+  return ancestorsOf(dir).some(holdsWorktrees)
+}
+
+// The folder itself and every folder above it, nearest first.
+export function ancestorsOf(dir: string): string[] {
+  const out: string[] = []
+  for (let d = dir.replace(/\/+$/, ''); d; d = d.slice(0, d.lastIndexOf('/'))) out.push(d)
+  return out
 }
 
 async function sharedFolder($: Host, cwd: string): Promise<boolean> {
   if (inWorktree(cwd)) return isSharedFolder(cwd, () => false)
   const dir = cwd.replace(/\/+$/, '')
-  const roots = new Set<string>()
-  for (const d of [dir, dir.slice(0, dir.lastIndexOf('/'))]) {
-    for (const m of WORKTREE_DIRS) {
-      if (
-        await $.fs.list(`${d}${m.replace(/\/$/, '')}`).then(
-          () => true,
-          () => false,
-        )
-      )
-        roots.add(d)
-    }
-  }
-  return isSharedFolder(cwd, d => roots.has(d))
+  const exists = (path: string) =>
+    $.fs.list(path).then(
+      () => true,
+      () => false,
+    )
+  const branchRoots = new Set<string>()
+  for (const d of [dir, dir.slice(0, dir.lastIndexOf('/'))]) if (await exists(`${d}/branches`)) branchRoots.add(d)
+  const worktreeRoots = new Set<string>()
+  for (const d of ancestorsOf(dir)) if (await exists(`${d}/.claude/worktrees`)) worktreeRoots.add(d)
+  return isSharedFolder(
+    cwd,
+    d => branchRoots.has(d),
+    d => worktreeRoots.has(d),
+  )
 }
 
 export const SHARED_REFUSAL =
