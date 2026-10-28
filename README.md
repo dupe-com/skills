@@ -6,67 +6,6 @@ Skills follow the [Agent Skills](https://agentskills.io/) specification.
 
 ## Available Skills
 
-### [dupe](./skills/dupe)
-
-Find similar products using dupe.com's visual search API.
-
-**Use when:**
-
-- User provides a product URL and asks for similar/alternative products
-- User shares an image URL and wants to find matching items
-- Searching for dupes, alternatives, or look-alikes
-
-**Features:**
-
-- Product URL search via dupe.com API
-- Direct image URL search capability
-- Returns matches with prices, store info, and direct links
-- Provides similarity scores and product rankings
-- Generates dupe.com result page links
-
-### [dupe-research](./skills/dupe-research)
-
-Launch AI-powered product research tasks from your agent — the same pipeline that powers dupe.com.
-
-**Use when:**
-
-- Researching the best products in a category ("best wireless earbuds under $100")
-- Comparing products with specific priorities (value, quality, reviews, etc.)
-- Getting AI-powered product recommendations with detailed reasoning
-- Generating a comprehensive research report for a product category
-
-**Features:**
-
-- 5 research archetypes (deal hunter, quality-first, quick pick, social proof, deep research)
-- Real-time progress tracking across 9 research phases
-- Returns product candidates with pricing, images, and brand info
-- Generates full editorial research articles
-- Links to published report pages on dupe.com
-- Protected by [BOTCHA](https://botcha.ai) — agent solves a speed challenge to authenticate (no API keys or SDKs needed)
-
-### [nomistakes](./skills/nomistakes)
-
-Error prevention and best practices enforcement for AI agent-assisted coding.
-
-**Use when:**
-
-- Writing new code or functions
-- Refactoring existing code
-- Implementing API integrations
-- Handling user input or external data
-- Working with async operations
-- Reviewing AI-generated code
-
-**Features:**
-
-- 10 core error prevention principles
-- Input validation, null safety, async handling
-- TypeScript strict mode patterns
-- Biome migration guide (ESLint → Biome)
-- AI code review checklist
-- Model configuration recommendations (Claude 3.5+, GPT-4+, extended thinking)
-- 60KB+ of reference documentation
-
 ### [reviews](./skills/reviews)
 
 Address GitHub PR review feedback end-to-end from your agent.
@@ -104,25 +43,6 @@ Rebase the current branch onto `origin/main` and resolve conflicts intelligently
 - Works commit-by-commit through multi-step rebases
 - Never force-pushes without explicit user confirmation
 
-### [ascii-renderer](./skills/ascii-renderer)
-
-Generate ASCII art from images or text using shape vector rendering.
-
-**Use when:**
-
-- Creating ASCII text banners for terminals, READMEs, or CLI tools
-- Converting images to ASCII art with high-quality edge detection
-- Building terminal splash screens or headers
-- Generating retro/terminal aesthetic text
-
-**Features:**
-
-- Text-to-ASCII with customizable fonts (Arial Black, Impact, etc.)
-- Image-to-ASCII conversion with sharp edge detection
-- Shape vector algorithm for superior quality vs traditional brightness mapping
-- Adjustable contrast, size, and invert options
-- Built-in demo mode
-
 ### [note](./skills/note)
 
 Pin a short personal reminder to the Claude Code status line.
@@ -148,10 +68,6 @@ Pin a short personal reminder to the Claude Code status line.
 Install any skill with a single command via [skills.sh](https://skills.sh):
 
 ```bash
-npx skills add dupe-com/skills/dupe-research
-npx skills add dupe-com/skills/dupe
-npx skills add dupe-com/skills/nomistakes
-npx skills add dupe-com/skills/ascii-renderer
 npx skills add dupe-com/skills/reviews
 npx skills add dupe-com/skills/rebased
 npx skills add dupe-com/skills/note
