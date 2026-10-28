@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "organization": "Dupe.com",
+  "author": "Ramin Bozorgzadeh",
+  "date": "October 2026",
+  "abstract": "Compacts a Claude Code session into a handoff document that the next session started in the same directory loads automatically through a SessionStart hook. Keys each handoff on the session's launch directory (with a hash, so look-alike paths never collide), or on the session's name in shared folders like the main checkout, so parallel worktrees never get each other's context.",
+  "references": [
+    "https://agentskills.io/specification",
+    "https://code.claude.com/docs/en/hooks"
+  ],
+  "compatibility": ["claude-code"],
+  "tags": ["handoff", "context", "sessions", "worktrees", "workflow"]
+}
