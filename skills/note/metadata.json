@@ -9,11 +9,5 @@
     "https://code.claude.com/docs/en/statusline"
   ],
   "compatibility": ["claude-code"],
-  "tags": [
-    "status-line",
-    "reminder",
-    "productivity",
-    "workflow",
-    "notes"
-  ]
+  "tags": ["status-line", "reminder", "productivity", "workflow", "notes"]
 }

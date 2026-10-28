@@ -78,6 +78,14 @@ jobs:
           echo ""
           echo "✅ All skills validated!"
 
+      - name: Run skill tests
+        run: |
+          for t in skills/*/scripts/*.test.sh; do
+            [ -f "$t" ] || continue
+            echo "🧪 $t"
+            bash "$t" || exit 1
+          done
+
       - name: Check for broken links in references
         run: |
           echo "🔗 Checking internal links..."

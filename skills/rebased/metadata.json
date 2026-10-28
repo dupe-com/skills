@@ -9,10 +9,5 @@
     "https://git-scm.com/docs/git-rebase"
   ],
   "compatibility": ["claude-code", "opencode", "cursor", "amp"],
-  "tags": [
-    "git",
-    "rebase",
-    "conflict-resolution",
-    "workflow"
-  ]
+  "tags": ["git", "rebase", "conflict-resolution", "workflow"]
 }
