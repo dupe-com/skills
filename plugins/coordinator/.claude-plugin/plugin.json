@@ -1,0 +1,9 @@
+{
+  "name": "coordinator",
+  "version": "1.0.0",
+  "author": {
+    "name": "Dupe.com"
+  },
+  "description": "Run one Claude session as the coordinator of several builder sessions: find them, see who is waiting on whom in a side panel, keep a board, and draft briefs.",
+  "types": "./types/index.d.ts"
+}

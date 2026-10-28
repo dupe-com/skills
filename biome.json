@@ -38,5 +38,32 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["plugins/**"],
+      "formatter": {
+        "lineWidth": 160
+      },
+      "javascript": {
+        "formatter": {
+          "arrowParentheses": "asNeeded"
+        }
+      }
+    },
+    {
+      "includes": ["plugins/**/tests/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noAssignInExpressions": "off"
+          },
+          "correctness": {
+            "noUnusedFunctionParameters": "off"
+          }
+        }
+      }
+    }
+  ]
 }
