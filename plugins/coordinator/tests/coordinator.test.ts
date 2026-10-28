@@ -145,7 +145,7 @@ function engine(on: On, files: Record<string, string>, seen: Seen, opts: { named
         ? '    1 /home/.local/bin/claude\n    2 claude\n    4 claude\n    3 zsh\n'
         : cmd === 'git'
           ? 'feature/auth-a\n'
-          : JSON.stringify([{ number: 101, headRefName: 'feature/auth-a', isDraft: true, title: 'Row buttons', headRefOid: '1e05c7968aaaa' }])
+          : JSON.stringify([{ number: 101, headRefName: 'feature/auth-a', isDraft: true, title: 'Row buttons', headRefOid: 'abc1234def567' }])
     return { value: { exitCode: 0, stdout, stderr: '' } } as any
   })
   on('tool.register', ($, e: any) => {
@@ -334,7 +334,7 @@ describe('coordinator helpers', () => {
 
   test('a folder group is the worktree name up to its first dash, with an emoji of its own', async () => {
     expect(groupOf('/w/branches/auth-log-in/apps/web')).toBe('auth')
-    expect(groupOf('/w/branches/haiku55')).toBeUndefined()
+    expect(groupOf('/w/branches/scratch1')).toBeUndefined()
     expect(groupOf('/w/branches/auth-')).toBeUndefined()
     expect(groupOf('/w/branches/all-x')).toBeUndefined()
     expect(groupOf('/w/auth-a')).toBeUndefined()
@@ -361,7 +361,7 @@ describe('coordinator helpers', () => {
   })
 
   test('only a Claude process keeps a session file live', async () => {
-    expect([...livePids('  12 /Users/r/.local/bin/claude\n  13 node\n  14 /bin/zsh\n  15 Google Chrome Helper\n')]).toEqual([12, 13])
+    expect([...livePids('  12 /Users/me/.local/bin/claude\n  13 node\n  14 /bin/zsh\n  15 Google Chrome Helper\n')]).toEqual([12, 13])
   })
 
   test('the brief carries the rules and the reply-to', async () => {
@@ -399,7 +399,7 @@ describe('coordinator', () => {
     const status = await coord($, 'status')
     expect(status).toContain('auth-a-6b (.claude-work)')
     expect(status).toContain('uds:/tmp/2.sock')
-    expect(status).toContain('#101 draft @ 1e05c7968')
+    expect(status).toContain('#101 draft @ abc1234de')
     expect(status).toContain('no messages yet')
     expect(status).not.toContain('old-1')
     expect(status).not.toContain('Coordinator (.claude)')
@@ -587,7 +587,7 @@ describe('coordinator', () => {
 
   test('a tab named by hand is left alone; a coordinator keeps its own status', async ($, on) => {
     const files: Record<string, string> = {}
-    const seen: Seen = { filled: [], tools: [], titles: [], tab: ['dev:@3', 'haiku55', '0'] }
+    const seen: Seen = { filled: [], tools: [], titles: [], tab: ['dev:@3', 'scratch1', '0'] }
     engine(on, files, seen, { selfCwd: `${ROOT}/branches/auth-b` })
     await $.session.start({ cwd: `${ROOT}/branches/auth-b`, surface: 'terminal', isInteractive: true })
     // A project made in this account reaches the other account's builders through the shared file.
