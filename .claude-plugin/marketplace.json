@@ -1,0 +1,16 @@
+{
+  "name": "dupe-skills",
+  "owner": {
+    "name": "Dupe.com"
+  },
+  "metadata": {
+    "description": "Claude Code plugins from dupe-com/skills."
+  },
+  "plugins": [
+    {
+      "name": "coordinator",
+      "source": "./plugins/coordinator",
+      "description": "Run one Claude session as the coordinator of several builder sessions: find them, see who is waiting on whom in a side panel, keep a board, and draft briefs."
+    }
+  ]
+}

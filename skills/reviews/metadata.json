@@ -10,11 +10,5 @@
     "https://docs.github.com/en/graphql/reference/mutations#resolvereviewthread"
   ],
   "compatibility": ["claude-code", "opencode", "cursor", "amp"],
-  "tags": [
-    "github",
-    "pull-requests",
-    "code-review",
-    "workflow",
-    "git"
-  ]
+  "tags": ["github", "pull-requests", "code-review", "workflow", "git"]
 }

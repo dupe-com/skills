@@ -1,71 +1,65 @@
 # Dupe Skills
 
-A collection of skills for AI coding agents. Skills are packaged instructions and references that extend agent capabilities.
+Skills and plugins for AI coding agents, mostly Claude Code. Skills are packaged instructions
+and scripts that extend what an agent can do. They follow the
+[Agent Skills](https://agentskills.io/) specification.
 
-Skills follow the [Agent Skills](https://agentskills.io/) specification.
+## The coordinator workflow
+
+This is how we run several Claude Code sessions in parallel without losing track of them.
+
+- **One coordinator per workstream.** It is a Claude Code session whose only job is the other
+  sessions: it hands out tasks, tracks their status, passes messages between them, reviews their
+  code, and gives you one short summary. It writes no product code itself.
+- **One builder per task.** Each builder is one session, in one git worktree, on one branch, so
+  builders never step on each other's files.
+- **You talk to the coordinator.** It talks to the builders.
+
+Two pieces in this repo make it work:
+
+- [**coordinator**](./plugins/coordinator) (a Claude Code plugin): a side panel listing every
+  builder and who is waiting on whom, a running log of decisions, brief templates, and the same
+  things as tools for Claude.
+- [**handoff**](./skills/handoff) (a skill): when a session's context gets long, `/handoff`
+  writes down where things stand, and the next session in that folder picks it up on its own.
+
+Getting started takes about 5 minutes:
+
+```bash
+# install both, once
+claude plugin marketplace add dupe-com/skills
+claude plugin install coordinator@dupe-skills --scope user
+npx skills add dupe-com/skills/handoff
+bash ~/.claude/skills/handoff/scripts/install-pickup-hook.sh
+
+# start a workstream: the coordinator and two builders, each in its own worktree
+claude -w auth-coord -n "Auth Coordinator" -- "/coord on"
+claude -w auth-login -n "auth login"
+claude -w auth-reset -n "auth reset"
+```
+
+`claude -w <name>` is Claude Code's built-in worktree flag; add `--tmux` to give each session
+its own tmux window. Name worktrees `<workstream>-<task>` and the coordinator groups them by
+that prefix with no setup. Then tell the coordinator what you want built. The
+[plugin README](./plugins/coordinator) covers the details.
 
 ## Available Skills
 
-### [dupe](./skills/dupe)
+### [handoff](./skills/handoff)
 
-Find similar products using dupe.com's visual search API.
-
-**Use when:**
-
-- User provides a product URL and asks for similar/alternative products
-- User shares an image URL and wants to find matching items
-- Searching for dupes, alternatives, or look-alikes
-
-**Features:**
-
-- Product URL search via dupe.com API
-- Direct image URL search capability
-- Returns matches with prices, store info, and direct links
-- Provides similarity scores and product rankings
-- Generates dupe.com result page links
-
-### [dupe-research](./skills/dupe-research)
-
-Launch AI-powered product research tasks from your agent — the same pipeline that powers dupe.com.
+Compact a long session into a handoff note that the next session picks up automatically.
 
 **Use when:**
 
-- Researching the best products in a category ("best wireless earbuds under $100")
-- Comparing products with specific priorities (value, quality, reviews, etc.)
-- Getting AI-powered product recommendations with detailed reasoning
-- Generating a comprehensive research report for a product category
+- You type `/handoff`, or you're running low on context and want a fresh session
+- You're stopping for the day and want tomorrow's session to start where you left off
 
 **Features:**
 
-- 5 research archetypes (deal hunter, quality-first, quick pick, social proof, deep research)
-- Real-time progress tracking across 9 research phases
-- Returns product candidates with pricing, images, and brand info
-- Generates full editorial research articles
-- Links to published report pages on dupe.com
-- Protected by [BOTCHA](https://botcha.ai) — agent solves a speed challenge to authenticate (no API keys or SDKs needed)
-
-### [nomistakes](./skills/nomistakes)
-
-Error prevention and best practices enforcement for AI agent-assisted coding.
-
-**Use when:**
-
-- Writing new code or functions
-- Refactoring existing code
-- Implementing API integrations
-- Handling user input or external data
-- Working with async operations
-- Reviewing AI-generated code
-
-**Features:**
-
-- 10 core error prevention principles
-- Input validation, null safety, async handling
-- TypeScript strict mode patterns
-- Biome migration guide (ESLint → Biome)
-- AI code review checklist
-- Model configuration recommendations (Claude 3.5+, GPT-4+, extended thinking)
-- 60KB+ of reference documentation
+- One note per folder, so parallel worktrees never get each other's context
+- A `SessionStart` hook loads a fresh note on its own and asks before loading an old one
+- In shared folders like the main checkout, notes belong to the session's name instead
+- Ships an installer that wires the hook into `settings.json`
 
 ### [reviews](./skills/reviews)
 
@@ -104,25 +98,6 @@ Rebase the current branch onto `origin/main` and resolve conflicts intelligently
 - Works commit-by-commit through multi-step rebases
 - Never force-pushes without explicit user confirmation
 
-### [ascii-renderer](./skills/ascii-renderer)
-
-Generate ASCII art from images or text using shape vector rendering.
-
-**Use when:**
-
-- Creating ASCII text banners for terminals, READMEs, or CLI tools
-- Converting images to ASCII art with high-quality edge detection
-- Building terminal splash screens or headers
-- Generating retro/terminal aesthetic text
-
-**Features:**
-
-- Text-to-ASCII with customizable fonts (Arial Black, Impact, etc.)
-- Image-to-ASCII conversion with sharp edge detection
-- Shape vector algorithm for superior quality vs traditional brightness mapping
-- Adjustable contrast, size, and invert options
-- Built-in demo mode
-
 ### [note](./skills/note)
 
 Pin a short personal reminder to the Claude Code status line.
@@ -143,21 +118,41 @@ Pin a short personal reminder to the Claude Code status line.
 
 ---
 
+## Available Plugins
+
+### [coordinator](./plugins/coordinator)
+
+Run one Claude Code session as the coordinator of several builder sessions.
+
+**Features:**
+
+- Side panel of live builders: busy or idle, worktree, pull request, and who owes whom a reply
+- Groups builders by worktree name (`auth-login`, `auth-reset`) with no setup
+- An append-only board and a message log, so a fresh coordinator can take over
+- `/coord brief` fills in a brief for a builder; `sessions`, `board` and `brief` tools for Claude
+- Jumps to a builder's tmux window from the panel
+
+---
+
 ## Installation
 
 Install any skill with a single command via [skills.sh](https://skills.sh):
 
 ```bash
-npx skills add dupe-com/skills/dupe-research
-npx skills add dupe-com/skills/dupe
-npx skills add dupe-com/skills/nomistakes
-npx skills add dupe-com/skills/ascii-renderer
+npx skills add dupe-com/skills/handoff
 npx skills add dupe-com/skills/reviews
 npx skills add dupe-com/skills/rebased
 npx skills add dupe-com/skills/note
 ```
 
 This works with Claude Code, OpenCode, Cursor, Windsurf, Cline, Codex, AMP, Copilot, and any agent that supports the [agentskills.io](https://agentskills.io) standard.
+
+Install the plugins from this repo's Claude Code marketplace:
+
+```bash
+claude plugin marketplace add dupe-com/skills
+claude plugin install coordinator@dupe-skills --scope user
+```
 
 ### Manual Installation
 
@@ -177,16 +172,18 @@ skills/skill-name/
 ├── SKILL.md           # Main instructions (required)
 ├── README.md          # Detailed documentation
 ├── metadata.json      # Version, author, tags
-├── LICENSE            # Skill-specific license
-├── references/        # Additional documentation
-└── scripts/           # Executable utilities
+├── references/        # Additional documentation (optional)
+└── scripts/           # Executable utilities (optional)
 ```
+
+Plugins live in `plugins/<name>/` with a `.claude-plugin/plugin.json`, and are listed in
+[`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json).
 
 ---
 
 ## Creating New Skills
 
-Use the template in [`template/SKILL.md`](./template/SKILL.md) as a starting point.
+Copy an existing skill such as [`skills/note`](./skills/note) as a starting point.
 
 ### Required Fields
 
@@ -202,7 +199,7 @@ description: What it does and when to use it
 1. **Keep SKILL.md under 500 lines** - Move detailed docs to `references/`
 2. **Write for agents** - Clear, actionable instructions
 3. **Include examples** - Show both ❌ BAD and ✅ GOOD patterns
-4. **Test your skill** - Run `node scripts/validate-skill.cjs` if available
+4. **Test your skill** - Put tests in `scripts/*.test.sh`; CI runs them
 
 ---
 
@@ -217,7 +214,7 @@ description: What it does and when to use it
 
 ## License
 
-Individual skills may have their own licenses. See each skill's LICENSE file.
+Individual skills may have their own licenses; check for a LICENSE file in the skill's folder.
 
 Repository structure and shared tooling: MIT
 
