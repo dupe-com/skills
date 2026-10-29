@@ -122,7 +122,7 @@ doc="$dir/latest.md"
 [ -f "$doc" ] || exit 0
 
 now=$(date +%s)
-mtime=$(stat -f %m "$doc" 2>/dev/null || stat -c %Y "$doc" 2>/dev/null || echo "$now")
+mtime=$(stat -c %Y "$doc" 2>/dev/null || stat -f %m "$doc" 2>/dev/null || echo "$now")
 age_min=$(( (now - mtime) / 60 ))
 age_days=$(( (now - mtime) / 86400 ))
 
